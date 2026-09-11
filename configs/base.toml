@@ -1,0 +1,28 @@
+[project]
+name = "PR03-01 conditional promoter generation"
+seed = 20260912
+
+[data]
+sequence_file = "promoter.npy"
+label_file = "gene_expression.npy"
+sequence_length = 50
+alphabet = "ACGT"
+label_transform = "log10"
+split_strategy = "random_dev"
+train_ratio = 0.70
+validation_ratio = 0.15
+test_ratio = 0.15
+
+[features]
+k_min = 1
+k_max = 3
+include_gc = true
+
+[model]
+name = "kmer_ridge_strength"
+ridge_alpha = 10.0
+
+[logging]
+level = "INFO"
+directory = "logs"
+filename = "pipeline.log"

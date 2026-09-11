@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.idea/
+.vscode/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Course data and generated artifacts
+data/raw/*
+data/processed/*
+outputs/
+logs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Keep directory descriptions in Git
+!data/raw/README.md
+!data/processed/README.md
