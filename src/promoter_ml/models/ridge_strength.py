@@ -58,10 +58,10 @@ class RidgeStrengthPredictor:
 
     @classmethod
     def load(cls, path: str | Path) -> "RidgeStrengthPredictor":
-        state = np.load(path)
-        model = cls(alpha=float(state["alpha"]))
-        model.feature_mean = state["feature_mean"]
-        model.feature_scale = state["feature_scale"]
-        model.weights = state["weights"]
-        model.intercept = float(state["intercept"])
+        with np.load(path) as state:
+            model = cls(alpha=float(state["alpha"]))
+            model.feature_mean = state["feature_mean"].copy()
+            model.feature_scale = state["feature_scale"].copy()
+            model.weights = state["weights"].copy()
+            model.intercept = float(state["intercept"])
         return model

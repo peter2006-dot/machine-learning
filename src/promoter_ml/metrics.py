@@ -24,9 +24,21 @@ def _rankdata(values: np.ndarray) -> np.ndarray:
 def regression_metrics(targets: np.ndarray, predictions: np.ndarray) -> dict[str, float]:
     targets = np.asarray(targets, dtype=np.float64)
     predictions = np.asarray(predictions, dtype=np.float64)
+    if targets.ndim != 1 or predictions.ndim != 1 or len(targets) != len(predictions) or len(targets) == 0:
+        raise ValueError("Expected matching non-empty one-dimensional target and prediction arrays")
     errors = predictions - targets
     mae = float(np.mean(np.abs(errors)))
     rmse = float(np.sqrt(np.mean(errors**2)))
-    pearson = float(np.corrcoef(targets, predictions)[0, 1])
-    spearman = float(np.corrcoef(_rankdata(targets), _rankdata(predictions))[0, 1])
+    pearson = (
+        float(np.corrcoef(targets, predictions)[0, 1])
+        if len(targets) > 1 and np.std(targets) > 1e-12 and np.std(predictions) > 1e-12
+        else 0.0
+    )
+    target_ranks = _rankdata(targets)
+    prediction_ranks = _rankdata(predictions)
+    spearman = (
+        float(np.corrcoef(target_ranks, prediction_ranks)[0, 1])
+        if len(targets) > 1 and np.std(target_ranks) > 1e-12 and np.std(prediction_ranks) > 1e-12
+        else 0.0
+    )
     return {"mae": mae, "rmse": rmse, "pearson": pearson, "spearman": spearman}

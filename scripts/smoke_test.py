@@ -36,6 +36,9 @@ def main() -> None:
             raise AssertionError("Saved and loaded predictions do not match")
         logger = configure_logging("smoke_test", Path(directory) / "logs")
         logger.info("Smoke test metrics: %s", metrics)
+        for handler in list(logger.handlers):
+            logger.removeHandler(handler)
+            handler.close()
 
     if not np.all(np.isfinite(predictions)) or metrics["pearson"] < 0.95:
         raise AssertionError(f"Unexpected smoke test result: {metrics}")

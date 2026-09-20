@@ -14,14 +14,16 @@
 - 课程数据读取与合法性检查；
 - 1-mer 至 3-mer 及 GC 特征；
 - 可保存和加载的岭回归强度预测基线；
+- 独立 CNN 强度评估器，checkpoint 内保存架构和序列契约；
+- σ70 `-35/-10` PWM 扫描、间距、新颖性和多样性验证；
 - CVAE 与自回归模型共用的生成器接口；
 - 不依赖课程数据的端到端检查脚本。
 
-岭回归模型用于验证数据、训练、评价、日志和保存流程是否连通。它是开发基线，不是最终的独立评估器。正式实验将使用相似性聚类划分替代当前的确定性随机划分，并比较更适合序列建模的预测器。
+岭回归模型用于验证数据、训练、评价、日志和保存流程是否连通。它是开发基线，不是最终的独立评估器。正式验证器使用相似性聚类划分和 CNN 强度模型。
 
 ## 环境
 
-需要 Python 3.10 或以上版本。
+需要 Python 3.10 或以上版本，以及 PyTorch 2.0 或以上。
 
 ```bash
 python -m venv .venv
@@ -95,4 +97,49 @@ feat(cvae): implement conditional decoder
 feat(ar): add temperature sampling
 fix(split): prevent similar sequences crossing datasets
 docs(m2): record EDA findings and reproduction commands
+```
+
+## 独立生成结果验证器
+
+正式验证器使用带位置感知分支的多尺度 1D CNN 训练独立强度模型，输入为序列 one-hot。全局池化分支学习可平移的局部 motif，位置分支保留 motif 在 50 bp 序列中的绝对位置。数据首先按序列相似性聚类，再以完整簇为单位划分训练集、验证集和测试集，避免近重复序列跨集合造成指标虚高。验证规则集中在 `configs/validator.toml`。模型架构、字母表、序列长度和独立测试指标保存在 `model.pt` 中，评估时不再依赖外部特征拼接。
+
+先在课程数据上训练独立强度评估器：
+
+```bash
+python scripts/train_independent_evaluator.py \
+  --data-dir data/raw \
+  --output-dir outputs/independent_evaluator
+```
+
+训练结果包括 `model.pt`、`metadata.json` 和可复查的 `split_indices.npz`。`metadata.json` 同时记录 CNN 指标，以及同一划分下位置 k-mer 岭回归对照。损失函数、早停指标和中位残差校准方式都写在配置与 checkpoint 中；旧版无位置分支 checkpoint 仍可加载。
+
+再验证生成序列：
+
+```bash
+python scripts/evaluate_generated_promoters.py \
+  --generated outputs/generated/promoters.npy \
+  --reference-data-dir data/raw \
+  --model outputs/independent_evaluator/model.pt \
+  --targets outputs/generated/target_strengths.npy \
+  --output-dir outputs/generated_validation
+```
+
+需要把验证器用于自动门禁时，增加 `--fail-on-rejection`。只要 `configs/validator.toml` 中任一可评估的 acceptance 规则失败，程序就以状态码 2 退出；未提供目标强度时，与目标控制有关的规则默认标记为 skipped，而不是伪造通过结果。
+
+`--generated` 支持 NPY、FASTA、CSV、TSV 和每行一条序列的文本文件。CSV/TSV 必须包含 `sequence` 列，可以同时包含原始尺度的 `target_strength` 或已经转换的 `target_log10_strength`。单独的 `--targets` 默认按原始正数强度读取；如果文件中已经是 log10 强度，需要增加 `--targets-log10`。
+
+验证器输出：
+
+- `summary.json`：合法率、目标强度命中率、motif、间距、新颖性、多样性、分布指标、评估器测试质量和 acceptance 判定；
+- `per_sequence.csv`：每条候选序列的完整检查结果；
+- `report.md`：可直接查看和整理进报告的汇总表。
+
+核心指标包括 MAE、RMSE、Pearson、Spearman、目标误差在 0.25/0.50 log10 内的命中率、σ70 `-35/-10` PWM 相对得分检出率、15–19 bp 间距通过率、GC 和 k-mer 分布差异、与训练数据的最近邻相似度、精确新颖率以及组内 Hamming 多样性。Motif 是否存在由相对 PWM 得分阈值判定，默认 0.60，对应略宽于两个错配的 σ70 盒变异。
+
+运行全部本地检查：
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/smoke_test.py
+python scripts/smoke_test_validator.py
 ```

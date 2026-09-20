@@ -1,0 +1,78 @@
+[project]
+name = "PR03-01 independent promoter validator"
+seed = 20260912
+
+[data]
+sequence_file = "promoter.npy"
+label_file = "gene_expression.npy"
+sequence_length = 50
+alphabet = "ACGT"
+label_transform = "log10"
+split_strategy = "similarity_cluster"
+train_ratio = 0.70
+validation_ratio = 0.15
+test_ratio = 0.15
+
+[features]
+k_min = 1
+k_max = 3
+include_gc = true
+include_position = true
+
+[model]
+name = "cnn_strength"
+stem_channels = 32
+kernel_sizes = [3, 5, 7]
+merge_channels = 64
+hidden_size = 64
+position_hidden_size = 64
+dropout = 0.35
+learning_rate = 0.0005
+weight_decay = 0.001
+batch_size = 128
+max_epochs = 100
+patience = 20
+min_delta = 0.002
+loss_name = "huber"
+selection_metric = "pearson"
+calibration = "median_bias"
+correlation_weight = 0.5
+mutation_rate = 0.25
+ridge_alpha = 10.0
+
+[split]
+identity_threshold = 0.80
+
+[motifs]
+minus35 = "TTGACA"
+minus10 = "TATAAT"
+relative_score_threshold = 0.60
+spacer_min = 15
+spacer_max = 19
+
+[validator]
+novelty_identity_threshold = 0.90
+target_tolerances_log10 = [0.25, 0.50]
+max_pairwise_sequences = 2000
+kmer_comparison_max = 3
+
+[acceptance]
+enabled = true
+require_all_metrics = false
+required_rules = ["max_evaluator_test_mae_log10", "min_evaluator_test_pearson"]
+min_valid_rate = 1.0
+min_unique_rate_among_valid = 0.95
+min_motif_pair_valid_rate = 0.20
+min_novel_at_threshold_rate = 0.90
+min_mean_pairwise_hamming_distance = 0.15
+max_kmer_profile_js_divergence = 0.10
+max_gc_histogram_js_divergence = 0.10
+max_target_mae_log10 = 0.50
+min_target_hit_rate_within_0_50_log10 = 0.50
+max_evaluator_test_mae_log10 = 0.50
+min_evaluator_test_pearson = 0.20
+
+[logging]
+level = "INFO"
+directory = "logs"
+filename = "validator.log"

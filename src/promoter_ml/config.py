@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tomllib
 from typing import Any
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 and earlier
+    import tomli as tomllib
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
